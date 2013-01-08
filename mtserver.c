@@ -30,7 +30,7 @@ if (argc!=3){
 
 unsigned int max_connections = atoi(argv[1]);
 unsigned int server_port = atoi(argv[2]);
-if (valid(max_connections, server_port)){
+if (!valid(max_connections, server_port)){
 	printhelpmessage();
 	exit(EXIT_SUCCESS);
 }
@@ -45,6 +45,6 @@ if (valid(max_connections, server_port)){
 
 
 
-
+return EXIT_SUCCESS;
 }
 

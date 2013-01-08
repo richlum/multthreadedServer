@@ -7,4 +7,4 @@ clean:
 	rm mtserver *.o
 
 mtserver: mtserver.c mtserver.h
-	$(CC) $(CFGLAGS) $(LDFLAGS) $? -o $@
+	$(CC) $(CFLAGS) $(LDFLAGS) $? -o $@
