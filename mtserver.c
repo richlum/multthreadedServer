@@ -7,6 +7,12 @@
 #include <string.h>  //memset
 #include <unistd.h>
 #include <arpa/inet.h>
+#include "mtserver.h"
+
+#include <time.h>
+
+time_t start, end;
+unsigned int clientcount=0;
 
 void printhelpmessage(void)
 {
@@ -93,11 +99,144 @@ void *get_in_addr(struct sockaddr *sa)
     return &(((struct sockaddr_in6*)sa)->sin6_addr);
 }
 
+int parse(char* commandbuffer){
+	char* ptr;
+
+	if((ptr = strstr(commandbuffer, "uptime"))!=NULL){
+		return CMD_UPTIME;
+	}else if ((ptr=strstr(commandbuffer,"load"))!=NULL){
+		return CMD_LOAD;
+	}else if ((ptr=strstr(commandbuffer,"exit"))!=NULL){
+		return CMD_EXIT;
+	}
+	return CMD_INVALID;
+}
+
+double uptime(void){
+	double diff;
+
+	time(&end);
+	diff = difftime(end,start);
+	return diff;
+
+}
+int load(){
+	return clientcount;
+}
+
+
+//execute cmd and send results to socket
+//return 1 if socket is shutdown,
+//return 0 if socket can continue servicing cmds
+int docmd(int cmd, int socket){
+	int flag = 0;
+	char resp[BUFSIZE];
+	int bytes=0;
+	memset(resp, '\0', BUFSIZE);
+
+	switch (cmd) {
+	case CMD_UPTIME:
+		sprintf(resp,"%f",uptime());
+		break;
+	case CMD_LOAD:
+		sprintf(resp,"%d", load());
+		break;
+	case CMD_EXIT:
+		sprintf(resp,"%d", 0);
+		break;
+	default:
+		sprintf(resp,"%d", CMD_INVALID);
+		break;
+	}
+
+	unsigned int sent=0;
+	bytes=send(socket,resp,strlen(resp),flag);
+	if (bytes==0){
+		printf("remote closed connection");
+		return 1;
+	}else if (bytes<0){
+		perror("Server send error");
+		return 1;
+	}else{
+		sent=bytes;
+		while(sent<strlen(resp)){
+			bytes=send(socket,resp+sent,strlen(resp)-sent,flag);
+			sent+=bytes;
+			if (bytes==0){
+				printf("remote closed connection");
+				return 1;
+			}else if (bytes<0){
+				perror("Server send error");
+				return 1;
+			}
+		}
+	}
+	// if we get here, cmd processing done, ok to continue
+	return 0;
+}
+
+
+
+//these have to have mutex protecting the updates
+void incrementclientcount(void){
+	clientcount++;
+}
+void decrementclientcount(void){
+	if (clientcount>0)
+		clientcount--;
+	else
+		printf("error decrementing client count = %d\n", clientcount);
+}
+unsigned int getclientcount(void){
+	return clientcount;
+}
+
+
+
+// incoming request message
+//	message must be complete within a single packet
+void handle_client(int sock){
+	char buffer[BUFSIZE];
+	int bytes;
+	int flag=0;
+	int errorcount=0;
+
+	incrementclientcount();
+
+	int done = 0;
+	do {
+		memset(buffer, '\0', BUFSIZE);
+		bytes = recv(sock, buffer, BUFSIZE, flag);
+		if (bytes==0){
+			printf("remote closed connection");
+			close(sock);
+			decrementclientcount();
+			return;
+		}
+		buffer[BUFSIZE-1]='\0';
+		printf("%s\n",buffer);
+		int cmd = parse(buffer);
+		if (cmd>=0){
+			done=docmd(cmd,sock);
+			errorcount=0;
+		}else{
+			done=docmd(INVALID,sock);
+			errorcount++;
+		}
+		if (errorcount>=3){
+			done=1;
+		}
+
+	}while(!done);
+
+}
+
 
 // should take in 2 parameters 
 // maxclients, server port number
 int main(int argc, char** argv)
 {
+
 	struct sockaddr_storage remote_address;
 	socklen_t  size_remote_addr;
 	int new_sockfd;
@@ -115,14 +254,9 @@ int main(int argc, char** argv)
 		exit(EXIT_SUCCESS);
 	}
 
+	time(&start); // start timer;
+
 	// create a socket
-	/**
-int main_socket = socket (AF_INET, SOCK_STREAM, 0);
-if (main_socket < 0){
-	printf("Unable to assign main socket");
-	perror("main_socket");
-}
-	 **/
 	int serversocket=get_main_socket(argv[2],max_connections);
 	if (serversocket<0){
 		printf("failed to get main socket");
@@ -132,7 +266,12 @@ if (main_socket < 0){
 
 	while(1){
 		size_remote_addr = sizeof (remote_address);
-		new_sockfd = accept(serversocket, (struct sockaddr*)&remote_address, &size_remote_addr);
+		if (getclientcount()<max_connections)
+			new_sockfd = accept(serversocket, (struct sockaddr*)&remote_address, &size_remote_addr);
+		else{
+			printf("connections exceeded %d\n",max_connections);
+			continue;
+		}
 		if (new_sockfd == -1){
 			perror("Server Accept error");
 			continue; // this one failed try again with next one
@@ -140,7 +279,13 @@ if (main_socket < 0){
 		//get the remote ip address
 		inet_ntop(remote_address.ss_family, get_in_addr((struct sockaddr*)&remote_address),
 				address, sizeof(address));
-		printf("server received connection from: %s", address);
+		if (address==NULL){
+			perror ("Server unable to get remote address");
+			continue;
+		}else{
+			printf("server received connection from: %s", address);
+			handle_client(new_sockfd);
+		}
 	}
 
 
