@@ -10,6 +10,7 @@
 #include "mtserver.h"
 
 #include <time.h>
+#include <pthread.h>
 
 time_t start, end;
 unsigned int clientcount=0;
@@ -29,7 +30,7 @@ int valid(int connections, int port){
 }
 
 
-// based on beej's guide example server
+// heavily based on beej's guide example server
 int get_main_socket(char* port, unsigned int connections)
 {
 	int sockfd;
@@ -171,6 +172,8 @@ int docmd(int cmd, int socket){
 			}
 		}
 	}
+	if (cmd==CMD_EXIT)
+		return 1;
 	// if we get here, cmd processing done, ok to continue
 	return 0;
 }
@@ -195,7 +198,9 @@ unsigned int getclientcount(void){
 
 // incoming request message
 //	message must be complete within a single packet
-void handle_client(int sock){
+//void handle_client(int sock){
+void *handle_client(void* arg){
+	int sock = *((int*)arg);
 	char buffer[BUFSIZE];
 	int bytes;
 	int flag=0;
@@ -211,7 +216,7 @@ void handle_client(int sock){
 			printf("remote closed connection");
 			close(sock);
 			decrementclientcount();
-			return;
+			return 0;
 		}
 		buffer[BUFSIZE-1]='\0';
 		printf("%s\n",buffer);
@@ -228,6 +233,7 @@ void handle_client(int sock){
 		}
 
 	}while(!done);
+	return 0;
 
 }
 
@@ -254,7 +260,12 @@ int main(int argc, char** argv)
 		exit(EXIT_SUCCESS);
 	}
 
+
 	time(&start); // start timer;
+
+	//allocate memory to hold max_connections threads
+	pthread_t *threads = (pthread_t*)malloc(max_connections*sizeof(pthread_t));
+	int *socknum = (int*)malloc(max_connections*sizeof(int));
 
 	// create a socket
 	int serversocket=get_main_socket(argv[2],max_connections);
@@ -266,7 +277,8 @@ int main(int argc, char** argv)
 
 	while(1){
 		size_remote_addr = sizeof (remote_address);
-		if (getclientcount()<max_connections)
+		unsigned int clients = getclientcount();
+		if (clients<max_connections)
 			new_sockfd = accept(serversocket, (struct sockaddr*)&remote_address, &size_remote_addr);
 		else{
 			printf("connections exceeded %d\n",max_connections);
@@ -284,7 +296,12 @@ int main(int argc, char** argv)
 			continue;
 		}else{
 			printf("server received connection from: %s", address);
-			handle_client(new_sockfd);
+			//handle_client(new_sockfd);
+			socknum[clients]=new_sockfd;
+			int rc = pthread_create(&threads[clients], NULL, handle_client, (void*)&socknum[clients]);
+			if (rc!=0){
+				printf("server pthread error %d\n",rc);
+			}
 		}
 	}
 

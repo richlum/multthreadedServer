@@ -1,6 +1,6 @@
 CC=gcc
 CFLAGS=-Wall -Werror -g -Wextra -Wno-unused-parameter
-LDFLAGS=
+LDFLAGS=-lpthread
 
 all:  mtserver
 clean: 
