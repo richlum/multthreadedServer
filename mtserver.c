@@ -14,6 +14,7 @@
 
 time_t start, end;
 unsigned int clientcount=0;
+pthread_mutex_t cl_cnt_mutex = PTHREAD_MUTEX_INITIALIZER;
 
 void printhelpmessage(void)
 {
@@ -21,6 +22,7 @@ void printhelpmessage(void)
 
 }
 
+// check main arg input
 int valid(int connections, int port){
 	if (connections<=0)
 		return 0;
@@ -29,7 +31,8 @@ int valid(int connections, int port){
 	return 1;
 }
 
-
+///////////////////////////////
+// allocate main server socket
 // heavily based on beej's guide example server
 int get_main_socket(char* port, unsigned int connections)
 {
@@ -100,6 +103,9 @@ void *get_in_addr(struct sockaddr *sa)
     return &(((struct sockaddr_in6*)sa)->sin6_addr);
 }
 
+
+////////////////////////////////
+// client command handlers
 int parse(char* commandbuffer){
 	char* ptr;
 
@@ -125,7 +131,32 @@ int load(){
 	return clientcount;
 }
 
+/////////////////////////////////////
+//shared variable for load reporting
+//these have to have mutex protecting the updates
+void incrementclientcount(void){
+	pthread_mutex_lock(&cl_cnt_mutex);
+	clientcount++;
+	pthread_mutex_unlock(&cl_cnt_mutex);
+}
+void decrementclientcount(void){
+	pthread_mutex_lock(&cl_cnt_mutex);
+	if (clientcount>0)
+		clientcount--;
+	else
+		printf("error decrementing client count = %d\n", clientcount);
+	pthread_mutex_unlock(&cl_cnt_mutex);
+}
+unsigned int getclientcount(void){
+	pthread_mutex_lock(&cl_cnt_mutex);
+	int count = clientcount;
+	pthread_mutex_unlock(&cl_cnt_mutex);
+	return count;
+}
 
+
+
+/////////////////////////////////////////
 //execute cmd and send results to socket
 //return 1 if socket is shutdown,
 //return 0 if socket can continue servicing cmds
@@ -172,30 +203,20 @@ int docmd(int cmd, int socket){
 			}
 		}
 	}
-	if (cmd==CMD_EXIT)
+	if (cmd==CMD_EXIT){
+		close(socket);
+		decrementclientcount();
 		return 1;
+	}
 	// if we get here, cmd processing done, ok to continue
 	return 0;
 }
 
 
 
-//these have to have mutex protecting the updates
-void incrementclientcount(void){
-	clientcount++;
-}
-void decrementclientcount(void){
-	if (clientcount>0)
-		clientcount--;
-	else
-		printf("error decrementing client count = %d\n", clientcount);
-}
-unsigned int getclientcount(void){
-	return clientcount;
-}
 
-
-
+////////////////////////////////////////
+//client handler per client (per thread)
 // incoming request message
 //	message must be complete within a single packet
 //void handle_client(int sock){
@@ -237,8 +258,8 @@ void *handle_client(void* arg){
 
 }
 
-
-// should take in 2 parameters 
+/////////////////////////////////////////////
+// take in 2 parameters
 // maxclients, server port number
 int main(int argc, char** argv)
 {
@@ -247,6 +268,7 @@ int main(int argc, char** argv)
 	socklen_t  size_remote_addr;
 	int new_sockfd;
 	char address[INET6_ADDRSTRLEN];
+	int server_sleep_seconds = 1;
 
 	if (argc!=3){
 		printhelpmessage();
@@ -278,10 +300,14 @@ int main(int argc, char** argv)
 	while(1){
 		size_remote_addr = sizeof (remote_address);
 		unsigned int clients = getclientcount();
-		if (clients<max_connections)
+		if (clients<max_connections){
 			new_sockfd = accept(serversocket, (struct sockaddr*)&remote_address, &size_remote_addr);
-		else{
-			printf("connections exceeded %d\n",max_connections);
+			printf("connection %d < max %d\n", clients,max_connections);
+		}else{
+			printf("connection %d exceeded %d\n", clients,max_connections);
+			while(getclientcount()>=max_connections){
+				sleep(server_sleep_seconds);
+			}
 			continue;
 		}
 		if (new_sockfd == -1){
@@ -295,6 +321,8 @@ int main(int argc, char** argv)
 			perror ("Server unable to get remote address");
 			continue;
 		}else{
+			//fixme : note that clients can and will close in order different that open order
+			//  need to handle finding empty slot for clients as long as we are less than max
 			printf("server received connection from: %s", address);
 			//handle_client(new_sockfd);
 			socknum[clients]=new_sockfd;
