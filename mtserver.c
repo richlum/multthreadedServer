@@ -19,6 +19,8 @@ time_t start, end;
 unsigned int clientcount=0;
 pthread_mutex_t cl_cnt_mutex = PTHREAD_MUTEX_INITIALIZER;
 
+
+
 void printhelpmessage(void)
 {
 	printf("usage: mtserver maxclients portnumber\n");
@@ -147,7 +149,11 @@ int load(){
 void incrementclientcount(void){
 	pthread_mutex_lock(&cl_cnt_mutex);
 	clientcount++;
+#ifdef DEBUG
+	printf ("incrementclientcount to=%d\n", clientcount);
+#endif
 	pthread_mutex_unlock(&cl_cnt_mutex);
+
 }
 void decrementclientcount(void){
 	pthread_mutex_lock(&cl_cnt_mutex);
@@ -218,9 +224,9 @@ int docmd(int cmd, int socket){
 		}
 	}
 	if (cmd==CMD_EXIT){
-		close(socket);
-		printf("socket(%d) , closed\n", socket);
-		decrementclientcount();
+//		close(socket);
+//		printf("socket(%d) , closed\n", socket);
+//		decrementclientcount();
 		return 1;
 	}
 	// if we get here, cmd processing done, ok to continue
@@ -250,9 +256,11 @@ void *handle_client(void* arg){
 		bytes = recv(sock, buffer, BUFSIZE, flag);
 		if (bytes==0){
 			printf("socket: %d remote closed connection", sock);
-			close(sock);
-			decrementclientcount();
-			return 0;
+//			close(sock);
+//			decrementclientcount();
+//			return 0;
+			done=1;
+			break;
 		}
 		buffer[BUFSIZE-1]='\0';
 		printf("%s\n",buffer);
@@ -269,6 +277,8 @@ void *handle_client(void* arg){
 		}
 
 	}while(!done);
+	close(sock);
+	decrementclientcount();
 	return 0;
 
 }
@@ -301,8 +311,8 @@ int main(int argc, char** argv)
 	time(&start); // start timer;
 
 	//allocate memory to hold max_connections threads
-	pthread_t *threads = (pthread_t*)malloc(max_connections*sizeof(pthread_t));
-	int *socknum = (int*)malloc(max_connections*sizeof(int));
+	//pthread_t *threads = (pthread_t*)malloc(max_connections*sizeof(pthread_t));
+	//int *socknum = (int*)malloc(max_connections*sizeof(int));
 
 	// create a socket
 	int serversocket=get_main_socket(argv[2],max_connections);
@@ -314,12 +324,13 @@ int main(int argc, char** argv)
 
 	while(1){
 		size_remote_addr = sizeof (remote_address);
-		unsigned int clients = getclientcount();
+		TRACE
 		new_sockfd = accept(serversocket, (struct sockaddr*)&remote_address, &size_remote_addr);
-		if (clients<max_connections-1){
-			printf("connection %d < max %d, new_sockfd=%d\n", clients,max_connections,new_sockfd);
+		unsigned int clients = getclientcount();
+		if (clients<max_connections){
+			printf("connection %d <= max %d, new_sockfd=%d\n", clients+1,max_connections,new_sockfd);
 		}else{
-			printf("connection %d exceeded %d, closing %d\n", clients,max_connections, new_sockfd);
+			printf("connection %d exceeded %d, closing %d\n", clients+1,max_connections, new_sockfd);
 			close(new_sockfd);
 //			while(getclientcount()>=(max_connections-1)){
 //#ifdef DEBUG
@@ -348,11 +359,16 @@ int main(int argc, char** argv)
 			//  need to handle finding empty slot for clients as long as we are less than max
 			printf("server socket %d received connection from: %s", new_sockfd, address);
 			//handle_client(new_sockfd);
-			socknum[clients]=new_sockfd;
-			int rc = pthread_create(&threads[clients], NULL, handle_client, (void*)&socknum[clients]);
+			int socknum=new_sockfd;
+			pthread_t thread;
+			int rc = pthread_create(&thread, NULL, handle_client, (void*)&socknum);
 			if (rc!=0){
 				printf("server pthread error %d for socket %d\n",rc, new_sockfd);
+			}else{
+				//non blocking, will release memory when thread is completed
+				pthread_detach(thread);
 			}
+
 		}
 	}
 
