@@ -8,3 +8,6 @@ clean:
 
 mtserver: mtserver.c mtserver.h
 	$(CC) $(CFLAGS) $(LDFLAGS) $? -o $@
+
+pi : CFLAGS += -Ofast -mfpu=vfp -mfloat-abi=hard -march=armv6zk -mtune=arm1176jzf-s
+pi : mtserver

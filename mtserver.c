@@ -12,6 +12,9 @@
 #include <time.h>
 #include <pthread.h>
 
+#define DEBUG
+#include "utility.h"
+
 time_t start, end;
 unsigned int clientcount=0;
 pthread_mutex_t cl_cnt_mutex = PTHREAD_MUTEX_INITIALIZER;
@@ -119,21 +122,28 @@ int parse(char* commandbuffer){
 	return CMD_INVALID;
 }
 
-double uptime(void){
-	double diff;
+// spec says to return unix time, not server uptime
+//double uptime(void){
+//	double diff;
+//
+//	time(&end);
+//	diff = difftime(end,start);
+//	return diff;
+//
+//}
 
-	time(&end);
-	diff = difftime(end,start);
-	return diff;
-
-}
-int load(){
-	return clientcount;
-}
 
 /////////////////////////////////////
-//shared variable for load reporting
-//these have to have mutex protecting the updates
+//client count shared variable for load reporting
+//these have to have mutex protecting all reads and writes
+int load(){
+	unsigned int load;
+	pthread_mutex_lock(&cl_cnt_mutex);
+	load=clientcount;
+	pthread_mutex_unlock(&cl_cnt_mutex);
+	return load;
+}
+
 void incrementclientcount(void){
 	pthread_mutex_lock(&cl_cnt_mutex);
 	clientcount++;
@@ -168,7 +178,7 @@ int docmd(int cmd, int socket){
 
 	switch (cmd) {
 	case CMD_UPTIME:
-		sprintf(resp,"%f",uptime());
+		sprintf(resp,"%ld", time(NULL));
 		break;
 	case CMD_LOAD:
 		sprintf(resp,"%d", load());
@@ -184,9 +194,12 @@ int docmd(int cmd, int socket){
 	unsigned int sent=0;
 	bytes=send(socket,resp,strlen(resp),flag);
 	if (bytes==0){
-		printf("remote closed connection");
+		TRACE
+		printf("socket(%d) , remote closed connection\n", socket);
 		return 1;
 	}else if (bytes<0){
+		TRACE
+		printf("socket(%d) , send error\n", socket);
 		perror("Server send error");
 		return 1;
 	}else{
@@ -195,9 +208,10 @@ int docmd(int cmd, int socket){
 			bytes=send(socket,resp+sent,strlen(resp)-sent,flag);
 			sent+=bytes;
 			if (bytes==0){
-				printf("remote closed connection");
+				printf("socket(%d), remote closed connection", socket);
 				return 1;
 			}else if (bytes<0){
+				printf("socket(%d) , send error\n", socket);
 				perror("Server send error");
 				return 1;
 			}
@@ -205,6 +219,7 @@ int docmd(int cmd, int socket){
 	}
 	if (cmd==CMD_EXIT){
 		close(socket);
+		printf("socket(%d) , closed\n", socket);
 		decrementclientcount();
 		return 1;
 	}
@@ -228,13 +243,13 @@ void *handle_client(void* arg){
 	int errorcount=0;
 
 	incrementclientcount();
-
+	TRACE
 	int done = 0;
 	do {
 		memset(buffer, '\0', BUFSIZE);
 		bytes = recv(sock, buffer, BUFSIZE, flag);
 		if (bytes==0){
-			printf("remote closed connection");
+			printf("socket: %d remote closed connection", sock);
 			close(sock);
 			decrementclientcount();
 			return 0;
@@ -268,7 +283,7 @@ int main(int argc, char** argv)
 	socklen_t  size_remote_addr;
 	int new_sockfd;
 	char address[INET6_ADDRSTRLEN];
-	int server_sleep_seconds = 1;
+	//int server_sleep_seconds = 1;
 
 	if (argc!=3){
 		printhelpmessage();
@@ -300,16 +315,23 @@ int main(int argc, char** argv)
 	while(1){
 		size_remote_addr = sizeof (remote_address);
 		unsigned int clients = getclientcount();
-		if (clients<max_connections){
-			new_sockfd = accept(serversocket, (struct sockaddr*)&remote_address, &size_remote_addr);
-			printf("connection %d < max %d\n", clients,max_connections);
+		new_sockfd = accept(serversocket, (struct sockaddr*)&remote_address, &size_remote_addr);
+		if (clients<max_connections-1){
+			printf("connection %d < max %d, new_sockfd=%d\n", clients,max_connections,new_sockfd);
 		}else{
-			printf("connection %d exceeded %d\n", clients,max_connections);
-			while(getclientcount()>=max_connections){
-				sleep(server_sleep_seconds);
-			}
+			printf("connection %d exceeded %d, closing %d\n", clients,max_connections, new_sockfd);
+			close(new_sockfd);
+//			while(getclientcount()>=(max_connections-1)){
+//#ifdef DEBUG
+//				printf(".");
+//#endif
+//				sleep(server_sleep_seconds);
+//
+//			}
+			printf("maxconn exceeded: socket closed\n");
 			continue;
 		}
+		TRACE
 		if (new_sockfd == -1){
 			perror("Server Accept error");
 			continue; // this one failed try again with next one
@@ -321,14 +343,15 @@ int main(int argc, char** argv)
 			perror ("Server unable to get remote address");
 			continue;
 		}else{
+			TRACE
 			//fixme : note that clients can and will close in order different that open order
 			//  need to handle finding empty slot for clients as long as we are less than max
-			printf("server received connection from: %s", address);
+			printf("server socket %d received connection from: %s", new_sockfd, address);
 			//handle_client(new_sockfd);
 			socknum[clients]=new_sockfd;
 			int rc = pthread_create(&threads[clients], NULL, handle_client, (void*)&socknum[clients]);
 			if (rc!=0){
-				printf("server pthread error %d\n",rc);
+				printf("server pthread error %d for socket %d\n",rc, new_sockfd);
 			}
 		}
 	}
