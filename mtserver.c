@@ -248,20 +248,37 @@ void *handle_client(void* arg){
 	int flag=0;
 	int errorcount=0;
 
+	// set recv timeout incase caller sits idle too long
+	struct timeval tv;
+	tv.tv_usec=0;
+	tv.tv_sec = 30 ; //30 second timeout value
+	if (setsockopt(sock,SOL_SOCKET, SO_RCVTIMEO,(void *)&tv,(socklen_t)sizeof(struct timeval))<0){
+		printf("setsockopt for SO_RCVTIMEO failed\n");
+		perror("so_rcvtimeo");
+	}
+
 	incrementclientcount();
 	TRACE
 	int done = 0;
 	do {
 		memset(buffer, '\0', BUFSIZE);
 		bytes = recv(sock, buffer, BUFSIZE, flag);
+		TRACE
 		if (bytes==0){
-			printf("socket: %d remote closed connection", sock);
+			printf("socket: %d remote closed connection\n", sock);
 //			close(sock);
 //			decrementclientcount();
 //			return 0;
 			done=1;
 			break;
+		}else if (bytes==-1){
+			//timeout will trigger this branch as well
+			printf("recv error\n");
+			perror("recv");
+			done=1;
+			break;
 		}
+		TRACE
 		buffer[BUFSIZE-1]='\0';
 		printf("%s\n",buffer);
 		int cmd = parse(buffer);
