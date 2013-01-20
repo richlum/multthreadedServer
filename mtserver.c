@@ -110,24 +110,6 @@ void *get_in_addr(struct sockaddr *sa)
 }
 
 
-////////////////////////////////
-// client command handlers
-//
-//
-//int parse(char* commandbuffer, int buffer_bytes){
-//	char* ptr;
-//
-//	if((ptr = strstr(commandbuffer, "uptime"))!=NULL){
-//		return CMD_UPTIME;
-//	}else if ((ptr=strstr(commandbuffer,"load"))!=NULL){
-//		return CMD_LOAD;
-//	}else if ((ptr=strstr(commandbuffer,"exit"))!=NULL){
-//		return CMD_EXIT;
-//	}
-//	return CMD_INVALID;
-//}
-
-
 //precondition - first char of buffer matches command
 //postcondtion - head will point to next unprocessed char(if any)
 //
@@ -140,7 +122,7 @@ int validate(char** head, char** tail, char* command){
 	int count = 0;
 	int commandlength = strlen(command);
 	char* savedhead = *head;
-	while((**head == *command)&&(*command!='\0')){
+	while((**head == *command)&&(*head!=*tail)){
 		(*head)++;
 		command++;
 		count++;
@@ -155,16 +137,14 @@ int validate(char** head, char** tail, char* command){
 			return CMD_EXIT;
 		}
 		return CMD_INVALID;
-	}else if(commandlength>count){
+	}else if (*head==*tail){
+		//we have a partial correct match
+		*head=savedhead;
+		return CMD_INCOMPLETE;
+	}//else if(commandlength>count){
 		//failed to match rest of chars in command
-		return CMD_INVALID;
-	}
-	// we should only get here if we have partial match and ran out of chars
-	// in buffer
-	assert (*head==*tail);
-	// partial command match, put head back to start of partial command
-	*head=savedhead;
-	return CMD_INCOMPLETE;
+	return CMD_INVALID;
+
 
 }
 
@@ -196,14 +176,14 @@ int parse( char** head,  char** tail){
 			matched=validate(head,tail ,"load");
 		}else{
 			TRACE
+#ifdef DEBUG
 			int i;
 			for (i=0;i<5;i++){
 				printf("\t%c\n",(*head)[i]);
 			}
+#endif
 			TRACE
-			printf("%x\n",(unsigned int)*head);
 			(*head)++;
-			printf("%x\n",(unsigned int)*head);
 			return CMD_INVALID;
 		}
 		//head should be pointing to next unprocessed char if more chars left
@@ -314,9 +294,6 @@ int docmd(int cmd, int socket){
 		}
 	}
 	if (cmd==CMD_EXIT){
-//		close(socket);
-//		printf("socket(%d) , closed\n", socket);
-//		decrementclientcount();
 		return 1;
 	}
 	// if we get here, cmd processing done, ok to continue
@@ -396,7 +373,9 @@ void *handle_client(void* arg){
 				// them before we ask socket for more to do
 				cmd = parse( &head_cmd, &tail_cmd);
 				TRACE
+#ifdef DEBUG
 				printf("cmd=%d\n",cmd);
+#endif
 				if (cmd==CMD_INVALID){
 					errorcount++;
 					done=docmd(cmd,sock);
@@ -404,6 +383,11 @@ void *handle_client(void* arg){
 					done=docmd(cmd,sock);
 				}else{ //cmd==CMD_INCOMPLETE
 					TRACE
+#ifdef DEBUG
+					printf("cmd=%d\n",cmd);
+					printf("head_cmd = %x\n", (unsigned int)head_cmd);
+					printf("tail_cmd = %x\n", (unsigned int)tail_cmd);
+#endif
 					assert(head_cmd==tail_cmd);
 					//CMD_INCOMPLETE - loop back to recv
 					//mv partial command to front of cmdbuffer
