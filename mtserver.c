@@ -263,28 +263,33 @@ unsigned int getclientcount(void){
 int docmd(int cmd, int socket){
 	TRACE
 	int flag = 0;
-	char resp[BUFSIZE];
+	//char resp[BUFSIZE];
+	int resp;
 	int bytes=0;
-	memset(resp, '\0', BUFSIZE);
+	//memset(resp, '\0', BUFSIZE);
 
 	switch (cmd) {
 	case CMD_UPTIME:
-		sprintf(resp,"%ld", time(NULL));
+		//sprintf(resp,"%ld", time(NULL));
+		resp=time(NULL);
 		break;
 	case CMD_LOAD:
-		sprintf(resp,"%d", load());
+		//sprintf(resp,"%d", load());
+		resp=load();
 		break;
 	case CMD_EXIT:
-		sprintf(resp,"%d", 0);
+		//sprintf(resp,"%d", 0);
+		resp=0;
 		break;
 	default:
 		TRACE
-		sprintf(resp,"%d", CMD_INVALID);
+		//sprintf(resp,"%d", CMD_INVALID);
+		resp=-1;
 		break;
 	}
 
 	unsigned int sent=0;
-	bytes=send(socket,resp,strlen(resp),flag);
+	bytes=send(socket,&resp,sizeof(resp),flag);
 	if (bytes==0){
 		TRACE
 		printf("socket(%d) , remote closed connection\n", socket);
@@ -296,8 +301,12 @@ int docmd(int cmd, int socket){
 		return 1;
 	}else{
 		sent=bytes;
-		while(sent<strlen(resp)){
-			bytes=send(socket,resp+sent,strlen(resp)-sent,flag);
+		//this was written before I understood responses are simple
+		//integers. highly unlikely we cant send a 4 byte integer
+		//but leaving it here in case we want to adapt for strings or
+		//arrays of integers in response
+		while(sent<sizeof(resp)){
+			bytes=send(socket,(&resp)+sent,sizeof(resp)-sent,flag);
 			sent+=bytes;
 			if (bytes==0){
 				printf("socket(%d), remote closed connection", socket);
