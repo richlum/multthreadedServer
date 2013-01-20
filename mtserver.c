@@ -405,18 +405,25 @@ void *handle_client(void* arg){
 					printf("head_cmd = %x\n", (unsigned int)head_cmd);
 					printf("tail_cmd = %x\n", (unsigned int)tail_cmd);
 #endif
-					assert(head_cmd==tail_cmd);
-					//CMD_INCOMPLETE - loop back to recv
+					//CMD_INCOMPLETE - goback to recv for more data
+
 					//mv partial command to front of cmdbuffer
-					i=0;
-					while(head_cmd<tail_cmd){
-						cmdbuffer[i] = *head_cmd;
-						i++;
-						head_cmd++;
+					if (head_cmd!=cmdbuffer){
+						i=0;
+						while(head_cmd<tail_cmd){
+							cmdbuffer[i] = *head_cmd;
+							i++;
+							head_cmd++;
+						}
+						head_cmd=cmdbuffer;
+						//cmdbuffer[i]='\0';
+						//this is where recv should start appending.
+						tail_cmd=&cmdbuffer[i];
+						//we must exit this loop with head_cmd<tail_cmd
+						//to preserver our partial 'so far valid' cmd
+						break;
 					}
-					//cmdbuffer[i]='\0';
-					//this is where recv should start appending.
-					tail_cmd=&cmdbuffer[i];
+
 				}
 			}
 			// if cmdbuffer hasnt been setup by partial cmd handling
