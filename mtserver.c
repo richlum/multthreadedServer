@@ -128,6 +128,7 @@ int validate(char** head, char** tail, char* command){
 		count++;
 	}
 	if (commandlength==count){
+		TRACE
 		//cmd complete, return command index
 		if (strncmp(savedhead,"load", strlen("load"))==0){
 			return CMD_LOAD;
@@ -136,13 +137,27 @@ int validate(char** head, char** tail, char* command){
 		}else if (strncmp(savedhead,"exit", strlen("exit"))==0){
 			return CMD_EXIT;
 		}
+		TRACE
 		return CMD_INVALID;
 	}else if (*head==*tail){
+		TRACE
 		//we have a partial correct match
 		*head=savedhead;
 		return CMD_INCOMPLETE;
-	}//else if(commandlength>count){
-		//failed to match rest of chars in command
+	}else if ((*head<*tail)&&(commandlength>count)){
+		TRACE
+		//partial match to command failed, reset head, then eat
+		// the first char as the trigger for command invalid
+		// and allow following chars to be retested subsequent calls
+		*head=savedhead;
+		(*head)++;
+		return CMD_INVALID;
+
+	}
+
+	//should not reach this point unless there are scenarios that
+	//we havent explictly handled correctly
+	TRACE
 	return CMD_INVALID;
 
 
@@ -263,6 +278,7 @@ int docmd(int cmd, int socket){
 		sprintf(resp,"%d", 0);
 		break;
 	default:
+		TRACE
 		sprintf(resp,"%d", CMD_INVALID);
 		break;
 	}
@@ -362,9 +378,10 @@ void *handle_client(void* arg){
 		}
 		tail_cmd=tail_cmd+i;
 
+		printf("head_cmd = %x", (unsigned int)head_cmd);
 		int cmd = parse(&head_cmd, &tail_cmd);
-		if (cmd>=0){
-			// only enter here if full command retrieved
+		printf("head_cmd = %x", (unsigned int)head_cmd);
+		if (cmd!=CMD_INCOMPLETE){
 			done=docmd(cmd,sock);
 			errorcount=0;
 			while(head_cmd!=tail_cmd){
@@ -420,6 +437,7 @@ void *handle_client(void* arg){
 					// head_cmd and tail_cmd are already set up correctly
 			continue;
 		}else{
+			TRACE
 			done=docmd(INVALID,sock);
 			errorcount++;
 		}
