@@ -8,6 +8,7 @@
 #define CMD_LOAD 1
 #define CMD_EXIT 2
 #define CMD_INVALID -1
-
+#define CMD_INCOMPLETE -2
+#define CMD_COMPLETE 3
 
 #endif

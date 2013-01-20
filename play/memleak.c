@@ -1,5 +1,8 @@
 #include<stdio.h>
 #include<pthread.h>
+
+//this will fail at 381 threads on typical machine running out of memory
+
 void run() {
    pthread_exit(0);
 }

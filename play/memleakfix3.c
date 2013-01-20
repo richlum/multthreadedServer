@@ -1,5 +1,9 @@
 #include<stdio.h>
 #include<pthread.h>
+
+// detaching will give responsibility for resource clean up to thread
+// tear down... we can see this as we exceed 381 threads with this
+// it also does not block waiting on prev thread to die since we detach
 void run(void* c) {
 	int cnt = *((int*)c);
 	printf("%d  thread working\n",cnt);

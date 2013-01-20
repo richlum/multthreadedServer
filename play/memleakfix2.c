@@ -1,5 +1,8 @@
 #include<stdio.h>
 #include<pthread.h>
+// this demonstrates the problem with the prev fix blocking when
+// client takes time to execute
+
 void run(void* c) {
 	int cnt = *((int*)c);
 	printf("%d  thread working\n",cnt);

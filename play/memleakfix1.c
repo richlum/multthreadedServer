@@ -1,5 +1,8 @@
 #include<stdio.h>
 #include<pthread.h>
+//this works but will block the launch of second thread until
+//first thread dies.
+
 void run(void* c) {
 	int cnt = *((int*)c);
 	printf("%d  thread working\n",cnt);
