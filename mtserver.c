@@ -387,9 +387,9 @@ void *handle_client(void* arg){
 		}
 		tail_cmd=tail_cmd+i;
 
-		printf("head_cmd = %x", (unsigned int)head_cmd);
+		//printf("head_cmd = %x", (unsigned int)head_cmd);
 		int cmd = parse(&head_cmd, &tail_cmd);
-		printf("head_cmd = %x", (unsigned int)head_cmd);
+		//printf("head_cmd = %x", (unsigned int)head_cmd);
 		if (cmd!=CMD_INCOMPLETE){
 			done=docmd(cmd,sock);
 			errorcount=0;
