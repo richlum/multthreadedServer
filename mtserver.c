@@ -272,7 +272,7 @@ void decrementclientcount(int sock){
 		c=clientcount;
 	}
 	pthread_mutex_unlock(&cl_cnt_mutex);
-	printf("error decrementing client count = %d\n", c);
+	printf("decrementing client count = %d\n", c);
 
 }
 unsigned int getclientcount(void){
@@ -376,6 +376,7 @@ void *handle_client(void* arg){
 	int bytes;
 	int flag=MSG_NOSIGNAL;
 	int errorcount=0;
+	incrementclientcount();
 	printf("new client started to handle socket fd = %d\n", sock);
 	// set recv timeout incase caller sits idle too long
 	struct timeval tv;
@@ -389,7 +390,7 @@ void *handle_client(void* arg){
 
 
 
-	incrementclientcount();
+
 	TRACE
 	int cmdbufsize = BUFSIZE*2;
 	char cmdbuffer[cmdbufsize];

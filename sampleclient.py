@@ -173,8 +173,9 @@ sock = new_sock()
 
 time.sleep(0.001)
 v = -2
+#sock.sendall("xyz")
 try:
-  sock.sendall("xyz")
+  sock.sendall("xyz",socket.MSG_NOSIGNAL)
   r = sock.recv(4)
   if (r):
     v = struct.unpack("i", r)[0]

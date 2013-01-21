@@ -7,7 +7,7 @@ import time
 def new_sock():
   global port
   sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-  sock.settimeout(0.100)
+  sock.settimeout(0.200)
   time.sleep(0.05)
   sock.connect(('localhost', port))
   return sock
@@ -173,8 +173,9 @@ sock = new_sock()
 
 time.sleep(0.001)
 v = -2
+sock.sendall("xyz")
 try:
-  sock.sendall("xyz")
+  #sock.sendall("xyz",socket.MSG_NOSIGNAL)
   r = sock.recv(4)
   if (r):
     v = struct.unpack("i", r)[0]

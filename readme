@@ -4,18 +4,24 @@ StNo: 41671785
 Testing on ubc machines currenlty shows 2 failures with demo client
 (downloaded version 20130121).
 
-It appears that something is happening on the client side with
+It appears that client side is causing itself to fail 2.2. 
 TEST 2.2: ERROR... exit command didn't close connection -1
 I think client generates a sigpipe and is getting the -1 locally.
 I modified the server to emit -1 on the third bad element as well as
-without and cant make this error go away.  I captured wireshark and 
-confirmed that I was inserting and removing the third -1 response and 
-still this problem.
+without and 2.2 always reports receivne -1.  
+Replacing sampleclient.py code line 178
+from sock.sendall("xyz")
+to   sock.sendall("xyz",socket.MSG_NOSIGNAL)
+allows the test to pass.
+
 
 On test set 3, I note that results can change with different runs
-and I am not sure if this means my implmentation of mutex is 
-wrong or if the test program cant really detect when exits are
-happening relative to when load responses are being generated.
+and tracing through the server program shows that it is a timing
+of when clients are started/ended vs other clients requesting load.
+The load number is consistent with the order of opertions seen
+by the server but the client does not appear to have any firm
+visibility of when a load is actually issued relative to when other
+clients have completed starting up or exiting.
 
 
 References:
@@ -24,7 +30,7 @@ http://beej.us/guide/bgnet/output/print/bgnet_A4.pdf
 http://www.yolinux.com/TUTORIALS/LinuxTutorialPosixThreads.html
 
 
-test results:
+test results: (without fixing 2.2 client script)
 ------------------------------------
 
 ==========
