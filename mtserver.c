@@ -173,8 +173,8 @@ int validate(char** head, char** tail, char* command){
 
 int parse( char** head,  char** tail){
 #ifdef DEBUG
-	printf("%x  %c \n", (unsigned int)*head, (unsigned int)**head);
-	printf("%x  %c \n", (unsigned int)*tail, (unsigned int)**tail);
+//	printf("%x  %c \n", (unsigned int)*head, (unsigned int)**head);
+//	printf("%x  %c \n", (unsigned int)*tail, (unsigned int)**tail);
 #endif
 	int matched=0;
 	// head == tail means buffer is empty. both should = command_buffer
@@ -411,8 +411,8 @@ void *handle_client(void* arg){
 					TRACE
 #ifdef DEBUG
 					printf("cmd=%d\n",cmd);
-					printf("head_cmd = %x\n", (unsigned int)head_cmd);
-					printf("tail_cmd = %x\n", (unsigned int)tail_cmd);
+//					printf("head_cmd = %lx\n", (long long int)head_cmd);
+//					printf("tail_cmd = %lx\n", (long long int)tail_cmd);
 #endif
 					//CMD_INCOMPLETE - goback to recv for more data
 
