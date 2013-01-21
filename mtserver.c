@@ -12,7 +12,7 @@
 #include <time.h>
 #include <pthread.h>
 
-#define DEBUG
+#undef DEBUG
 #include "utility.h"
 #include <assert.h>
 
