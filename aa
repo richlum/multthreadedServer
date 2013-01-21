@@ -1,0 +1,248 @@
+gcc -Wall -Werror -g -Wextra -Wno-unused-parameter -lpthread mtserver.c -o mtserver
+rlum@voyager:~/Documents/c416/a1$ ./mtserver 9 9999
+Entered:main:  AT mtserver.c:591
+connection 1 <= max 9, new_sockfd=4
+Entered:main:  AT mtserver.c:609
+Entered:main:  AT mtserver.c:621
+server socket 4 received connection from: 127.0.0.1
+Entered:main:  AT mtserver.c:632
+Entered:main:  AT mtserver.c:634
+Entered:main:  AT mtserver.c:637
+Entered:main:  AT mtserver.c:591
+new client started to handle socket fd = 4
+incrementclientcount to=1
+Entered:handle_client:  AT mtserver.c:375
+Entered:handle_client:  AT mtserver.c:387
+Entered:handle_client:  AT mtserver.c:399
+Server(4) Recd: 'uptime'
+Entered:parse:  AT mtserver.c:194
+Entered:validate:  AT mtserver.c:131
+matched=0
+Entered:handle_client:  AT mtserver.c:422
+Entered:handle_client:  AT mtserver.c:425
+reset(4) errorcount=0
+Entered:handle_client:  AT mtserver.c:432
+Entered:docmd:  AT mtserver.c:276
+Entered:docmd:  AT mtserver.c:305
+sending(1358755815) to cmd 0 
+Entered:docmd:  AT mtserver.c:339
+Entered:docmd:  AT mtserver.c:345
+Entered:handle_client:  AT mtserver.c:445
+Entered:handle_client:  AT mtserver.c:536
+Entered:handle_client:  AT mtserver.c:387
+Entered:handle_client:  AT mtserver.c:399
+Server(4) Recd: 'uptime'
+Entered:parse:  AT mtserver.c:194
+Entered:validate:  AT mtserver.c:131
+matched=0
+Entered:handle_client:  AT mtserver.c:422
+Entered:handle_client:  AT mtserver.c:425
+reset(4) errorcount=0
+Entered:handle_client:  AT mtserver.c:432
+Entered:docmd:  AT mtserver.c:276
+Entered:docmd:  AT mtserver.c:305
+sending(1358755816) to cmd 0 
+Entered:docmd:  AT mtserver.c:339
+Entered:docmd:  AT mtserver.c:345
+Entered:handle_client:  AT mtserver.c:445
+Entered:handle_client:  AT mtserver.c:536
+Entered:handle_client:  AT mtserver.c:387
+Entered:handle_client:  AT mtserver.c:399
+Server(4) Recd: 'load'
+Entered:parse:  AT mtserver.c:194
+Entered:validate:  AT mtserver.c:131
+matched=1
+Entered:handle_client:  AT mtserver.c:422
+Entered:handle_client:  AT mtserver.c:425
+reset(4) errorcount=0
+Entered:handle_client:  AT mtserver.c:432
+Entered:docmd:  AT mtserver.c:276
+Entered:docmd:  AT mtserver.c:305
+sending(1) to cmd 1 
+Entered:docmd:  AT mtserver.c:339
+Entered:docmd:  AT mtserver.c:345
+Entered:handle_client:  AT mtserver.c:445
+Entered:handle_client:  AT mtserver.c:536
+Entered:handle_client:  AT mtserver.c:387
+Entered:handle_client:  AT mtserver.c:399
+Server(4) Recd: 'load'
+Entered:parse:  AT mtserver.c:194
+Entered:validate:  AT mtserver.c:131
+matched=1
+Entered:handle_client:  AT mtserver.c:422
+Entered:handle_client:  AT mtserver.c:425
+reset(4) errorcount=0
+Entered:handle_client:  AT mtserver.c:432
+Entered:docmd:  AT mtserver.c:276
+Entered:docmd:  AT mtserver.c:305
+sending(1) to cmd 1 
+Entered:docmd:  AT mtserver.c:339
+Entered:docmd:  AT mtserver.c:345
+Entered:handle_client:  AT mtserver.c:445
+Entered:handle_client:  AT mtserver.c:536
+Entered:handle_client:  AT mtserver.c:387
+Entered:handle_client:  AT mtserver.c:399
+Server(4) Recd: 'exit'
+Entered:parse:  AT mtserver.c:194
+Entered:validate:  AT mtserver.c:131
+matched=2
+Entered:handle_client:  AT mtserver.c:422
+Entered:handle_client:  AT mtserver.c:425
+reset(4) errorcount=0
+Entered:handle_client:  AT mtserver.c:432
+Entered:docmd:  AT mtserver.c:276
+Entered:docmd:  AT mtserver.c:305
+sending(0) to cmd 2 
+Entered:docmd:  AT mtserver.c:339
+Entered:docmd:  AT mtserver.c:341
+Entered:handle_client:  AT mtserver.c:441
+Entered:handle_client:  AT mtserver.c:542
+closing socket fd=4
+connection 1 <= max 9, new_sockfd=5
+Entered:main:  AT mtserver.c:609
+Entered:main:  AT mtserver.c:621
+server socket 5 received connection from: 127.0.0.1
+Entered:main:  AT mtserver.c:632
+Entered:main:  AT mtserver.c:634
+Entered:main:  AT mtserver.c:637
+Entered:main:  AT mtserver.c:591
+new client started to handle socket fd = 5
+incrementclientcount to=1
+Entered:handle_client:  AT mtserver.c:375
+Entered:handle_client:  AT mtserver.c:387
+Entered:handle_client:  AT mtserver.c:399
+Server(5) Recd: 'a'
+Entered:parse:  AT mtserver.c:194
+Entered:parse:  AT mtserver.c:205
+	a
+	
+	
+	
+	
+Entered:parse:  AT mtserver.c:212
+Entered:handle_client:  AT mtserver.c:422
+errorcount(5)=1
+Entered:handle_client:  AT mtserver.c:432
+Entered:docmd:  AT mtserver.c:276
+Entered:docmd:  AT mtserver.c:300
+Entered:docmd:  AT mtserver.c:305
+sending(-1) to cmd -1 
+Entered:docmd:  AT mtserver.c:339
+Entered:docmd:  AT mtserver.c:345
+Entered:handle_client:  AT mtserver.c:445
+Entered:handle_client:  AT mtserver.c:536
+Entered:handle_client:  AT mtserver.c:387
+Entered:handle_client:  AT mtserver.c:399
+Server(5) Recd: 'b'
+Entered:parse:  AT mtserver.c:194
+Entered:parse:  AT mtserver.c:205
+	b
+	
+	
+	
+	
+Entered:parse:  AT mtserver.c:212
+Entered:handle_client:  AT mtserver.c:422
+errorcount(5)=2
+Entered:handle_client:  AT mtserver.c:432
+Entered:docmd:  AT mtserver.c:276
+Entered:docmd:  AT mtserver.c:300
+Entered:docmd:  AT mtserver.c:305
+sending(-1) to cmd -1 
+Entered:docmd:  AT mtserver.c:339
+Entered:docmd:  AT mtserver.c:345
+Entered:handle_client:  AT mtserver.c:445
+Entered:handle_client:  AT mtserver.c:536
+Entered:handle_client:  AT mtserver.c:387
+Entered:handle_client:  AT mtserver.c:399
+Server(5) Recd: 'c'
+Entered:parse:  AT mtserver.c:194
+Entered:parse:  AT mtserver.c:205
+	c
+	
+	
+	
+	
+Entered:parse:  AT mtserver.c:212
+Entered:handle_client:  AT mtserver.c:422
+errorcount(5)=3
+Entered:handle_client:  AT mtserver.c:432
+Entered:docmd:  AT mtserver.c:276
+Entered:docmd:  AT mtserver.c:300
+Entered:docmd:  AT mtserver.c:305
+sending(-1) to cmd -1 
+Entered:docmd:  AT mtserver.c:339
+Entered:docmd:  AT mtserver.c:345
+Entered:handle_client:  AT mtserver.c:445
+Entered:handle_client:  AT mtserver.c:536
+Entered:handle_client:  AT mtserver.c:542
+closing socket fd=5
+connection 1 <= max 9, new_sockfd=4
+Entered:main:  AT mtserver.c:609
+Entered:main:  AT mtserver.c:621
+server socket 4 received connection from: 127.0.0.1
+Entered:main:  AT mtserver.c:632
+Entered:main:  AT mtserver.c:634
+Entered:main:  AT mtserver.c:637
+Entered:main:  AT mtserver.c:591
+new client started to handle socket fd = 4
+incrementclientcount to=1
+Entered:handle_client:  AT mtserver.c:375
+Entered:handle_client:  AT mtserver.c:387
+Entered:handle_client:  AT mtserver.c:399
+Server(4) Recd: 'xyz'
+Entered:parse:  AT mtserver.c:194
+Entered:parse:  AT mtserver.c:205
+	x
+	y
+	z
+	
+	
+Entered:parse:  AT mtserver.c:212
+Entered:handle_client:  AT mtserver.c:422
+errorcount(4)=1
+Entered:handle_client:  AT mtserver.c:432
+Entered:docmd:  AT mtserver.c:276
+Entered:docmd:  AT mtserver.c:300
+Entered:docmd:  AT mtserver.c:305
+sending(-1) to cmd -1 
+Entered:docmd:  AT mtserver.c:339
+Entered:docmd:  AT mtserver.c:345
+Entered:handle_client:  AT mtserver.c:445
+Entered:handle_client:  AT mtserver.c:447
+Entered:parse:  AT mtserver.c:194
+Entered:parse:  AT mtserver.c:205
+	y
+	z
+	
+	
+	
+Entered:parse:  AT mtserver.c:212
+Entered:handle_client:  AT mtserver.c:459
+cmd(4)=-1
+Entered:handle_client:  AT mtserver.c:464
+incr(4) errorcount=2
+Entered:docmd:  AT mtserver.c:276
+Entered:docmd:  AT mtserver.c:300
+Entered:docmd:  AT mtserver.c:305
+sending(-1) to cmd -1 
+Entered:docmd:  AT mtserver.c:339
+Entered:docmd:  AT mtserver.c:345
+Entered:handle_client:  AT mtserver.c:473
+Entered:handle_client:  AT mtserver.c:447
+Entered:parse:  AT mtserver.c:194
+Entered:parse:  AT mtserver.c:205
+	z
+	
+	
+	
+	
+Entered:parse:  AT mtserver.c:212
+Entered:handle_client:  AT mtserver.c:459
+cmd(4)=-1
+Entered:handle_client:  AT mtserver.c:464
+incr(4) errorcount=3
+Entered:docmd:  AT mtserver.c:276
+Entered:docmd:  AT mtserver.c:300
+Entered:docmd:  AT mtserver.c:305
+

@@ -253,7 +253,6 @@ void incrementclientcount(void){
 }
 void decrementclientcount(int sock){
 	pthread_mutex_lock(&cl_cnt_mutex);
-	close(sock);
 	if (clientcount>0)
 		clientcount--;
 	else
@@ -275,9 +274,9 @@ unsigned int getclientcount(void){
 //return 0 if socket can continue servicing cmds
 int docmd(int cmd, int socket){
 	TRACE
-	int flag = 0;
+	int flag = MSG_NOSIGNAL;;
 	//char resp[BUFSIZE];
-	int resp;
+	int resp=0;
 	int bytes=0;
 	//memset(resp, '\0', BUFSIZE);
 
@@ -306,7 +305,7 @@ int docmd(int cmd, int socket){
 	TRACE
 	unsigned int sent=0;
 	bytes=send(socket,&resp,sizeof(resp),flag);
-	printf("sending(%d)\n",resp);
+	printf("sending(socket:%d) %d to cmd %d \n",socket, resp, cmd);
 	if (bytes==0){
 		TRACE
 		printf("socket(%d) , remote closed connection\n", socket);
@@ -325,7 +324,7 @@ int docmd(int cmd, int socket){
 		while(sent<sizeof(resp)){
 			TRACE
 			bytes=send(socket,(&resp)+sent,sizeof(resp)-sent,flag);
-			printf("sending(%d)\n",resp);
+			printf("sending(socket:%d) resp=%d\n",socket,resp);
 			sent+=bytes;
 			if (bytes==0){
 				printf("socket(%d), remote closed connection", socket);
@@ -359,7 +358,7 @@ void *handle_client(void* arg){
 	int sock = *((int*)arg);
 	char buffer[BUFSIZE];
 	int bytes;
-	int flag=0;
+	int flag=MSG_NOSIGNAL;
 	int errorcount=0;
 	printf("new client started to handle socket fd = %d\n", sock);
 	// set recv timeout incase caller sits idle too long
@@ -371,6 +370,8 @@ void *handle_client(void* arg){
 		printf("setsockopt for SO_RCVTIMEO failed\n");
 		perror("so_rcvtimeo");
 	}
+
+
 
 	incrementclientcount();
 	TRACE
@@ -542,7 +543,7 @@ void *handle_client(void* arg){
 	}while(!done);
 	TRACE
 	printf("closing socket fd=%d\n",sock);
-	//close(sock);
+	close(sock);
 	decrementclientcount(sock);
 	return 0;
 
@@ -591,6 +592,7 @@ int main(int argc, char** argv)
 		size_remote_addr = sizeof (remote_address);
 		TRACE
 		new_sockfd = accept(serversocket, (struct sockaddr*)&remote_address, &size_remote_addr);
+		TRACE
 		unsigned int clients = getclientcount();
 		if (clients<max_connections){
 			printf("connection %d <= max %d, new_sockfd=%d\n", clients+1,max_connections,new_sockfd);
@@ -630,10 +632,14 @@ int main(int argc, char** argv)
 			}else{
 				//non blocking, will release memory when thread is completed
 				pthread_detach(thread);
+				TRACE
 			}
+			TRACE
 
 		}
+		TRACE
 	}
+	TRACE
 
 
 
