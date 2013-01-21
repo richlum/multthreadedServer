@@ -1,22 +1,18 @@
 #!/usr/bin/python
-
 import socket
 import sys
 import struct
 import time
 
-def new_sock(address='localhost'):
+def new_sock():
   global port
   sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-  sock.settimeout(0.100)
+  sock.settimeout(0.200)
   time.sleep(0.05)
-  sock.connect((address, port))
+  sock.connect(('localhost', port))
   return sock
 
 port = int(sys.argv[1])
-if (len(sys.argv) >2 ):
-	ipaddress = sys.argv[2]
-
 
 # Single-connection tests
 
@@ -27,12 +23,7 @@ if (len(sys.argv) >2 ):
 #     a reasonable time difference was observed
 # (3) check that "load" correctly returns 1 a few times
 # (4) check that "exit" correctly returns 0, and the connection is actually closed
-
-if (len(sys.argv)>2):
-	sock = new_sock(sys.argv[2])
-else:
-	sock = new_sock()
-
+sock = new_sock()
 print "="*10 + "\nTEST 1\n" + "="*10
 
 # (1)
@@ -121,13 +112,7 @@ else:
 # (5) Test buffer overrun
 # (6) Test "uptimexit" - make sure the "e" can't be shared
 sock.close()
-
-if (len(sys.argv)>2):
-	sock = new_sock(sys.argv[2])
-else:
-	sock = new_sock()
-
-
+sock = new_sock()
 time.sleep(0.1)
 print "\n" + "="*10 + "\nTEST 2\n" + "="*10
 
@@ -162,7 +147,8 @@ sock.sendall("c")
 v = -2
 try:
   r = sock.recv(4)
-  v = struct.unpack("i", r)[0]
+  if (r):
+  	v = struct.unpack("i", r)[0]
 except socket.timeout:
   print "TEST 2.1: receive timed out"
 if v == -1:
@@ -182,6 +168,8 @@ else:
   print "TEST 2.1: Didn't time out"
 
 # (2)
+sock.close()
+sock = new_sock()
 
 time.sleep(0.001)
 v = -2
@@ -191,6 +179,7 @@ try:
   if (r):
     v = struct.unpack("i", r)[0]
 except:
+  print "test 2.2 timed out"
   pass
 if v == -2:
   print "TEST 2.2: OK... receive timed out; connection is correctly closed"
@@ -236,13 +225,13 @@ try:
 except:
   pass
 if v == -1:
-  print "TEST 2.3: OK... -1 returned for invalid request"
+  print "TEST 2.3.1: OK... -1 returned for invalid request"
 else:
-  print "TEST 2.3: ERROR... -1 not returned for bogus request"
+  print "TEST 2.3.1: ERROR... -1 not returned for bogus request"
 if v2 == -1:
-  print "TEST 2.3: OK... -1 returned for invalid request"
+  print "TEST 2.3.2: OK... -1 returned for invalid request"
 else:
-  print "TEST 2.3: ERROR... -1 not returned for bogus request"
+  print "TEST 2.3.2: ERROR... -1 not returned for bogus request"
 v = -2
 try:
   sock.sendall("z")
@@ -323,8 +312,8 @@ v, v2 = -2, -2
 try:
   sock.sendall("xl")
   r = sock.recv(4)
-  r2 = sock.recv(4)
   v = struct.unpack("i", r)[0]
+  r2 = sock.recv(4)
   if r2:
     v2 = struct.unpack("i", r2)[0]
 except socket.timeout:
@@ -346,9 +335,21 @@ try:
 except socket.timeout:
   print "TEST 2.7: receive timed out"
 if v == -1:
-  print "TEST 2.7: OK... first x correctly received -1 return value"
+  print "TEST 2.7: OK... first x after l correctly received -1 return value"
 else:
-  print "TEST 2.7: ERROR... first x didn't receive -1 return value"
+  print "TEST 2.7: ERROR... first x after l didn't receive -1 return value"
+v = -2
+try:
+  sock.sendall("x")
+  r = sock.recv(4)
+  if r:
+    v = struct.unpack("i", r)[0]
+except:
+  pass
+if v == -1:
+  print "TEST 2.7: OK... second x after l correctly received -1 return value"
+else:
+  print "TEST 2.7: ERROR... second x after l didn't receive -1 return value"
 v = -2
 try:
   sock.sendall("x")
@@ -358,9 +359,9 @@ try:
 except:
   pass
 if v == -2:
-  print "TEST 2.7: OK... connection is correctly closed"
+  print "TEST 2.7: OK... connection is correctly closed after xlxx"
 else:
-  print "TEST 2.7: ERROR... connection didn't correctly closed, got back a value of " + str(v)
+  print "TEST 2.7: ERROR... connection didn't correctly close after xlxx, got back a value of " + str(v)
 
 sock.close()
 # Multi-connection tests
@@ -429,6 +430,7 @@ else:
 map(lambda s: s.close(), socks)
 socks = map(lambda ign: new_sock(), range(3))
 socks[0].sendall("exit")
+time.sleep(0.1)
 socks[1].sendall("load")
 socks[2].sendall("load")
 v, v2, v3 = -2, -2, -2

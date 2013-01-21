@@ -151,6 +151,15 @@ int validate(char** head, char** tail, char* command){
 		// and allow following chars to be retested subsequent calls
 		*head=savedhead;
 		(*head)++;
+		while(savedhead<*tail){
+			if(*savedhead==(char)3){
+				//control c in recv buffer
+				//quit immediately
+				return CMD_CONTROL_C;
+			}
+			savedhead++;
+		}
+
 		return CMD_INVALID;
 
 	}
@@ -189,7 +198,10 @@ int parse( char** head,  char** tail){
 			matched=validate(head,tail,"exit");
 		}else if (**head == 'l'){
 			matched=validate(head,tail ,"load");
-		}else{
+		}else if (**head == (char) 3){
+			TRACE
+			matched=CMD_CONTROL_C;
+		}else {
 			TRACE
 #ifdef DEBUG
 			int i;
@@ -239,8 +251,9 @@ void incrementclientcount(void){
 	pthread_mutex_unlock(&cl_cnt_mutex);
 
 }
-void decrementclientcount(void){
+void decrementclientcount(int sock){
 	pthread_mutex_lock(&cl_cnt_mutex);
+	close(sock);
 	if (clientcount>0)
 		clientcount--;
 	else
@@ -281,15 +294,19 @@ int docmd(int cmd, int socket){
 		//sprintf(resp,"%d", 0);
 		resp=0;
 		break;
+	case CMD_CONTROL_C:
+		resp=-1;
+		break;
 	default:
 		TRACE
 		//sprintf(resp,"%d", CMD_INVALID);
 		resp=-1;
 		break;
 	}
-
+	TRACE
 	unsigned int sent=0;
 	bytes=send(socket,&resp,sizeof(resp),flag);
+	printf("sending(%d)\n",resp);
 	if (bytes==0){
 		TRACE
 		printf("socket(%d) , remote closed connection\n", socket);
@@ -306,7 +323,9 @@ int docmd(int cmd, int socket){
 		//but leaving it here in case we want to adapt for strings or
 		//arrays of integers in response
 		while(sent<sizeof(resp)){
+			TRACE
 			bytes=send(socket,(&resp)+sent,sizeof(resp)-sent,flag);
+			printf("sending(%d)\n",resp);
 			sent+=bytes;
 			if (bytes==0){
 				printf("socket(%d), remote closed connection", socket);
@@ -318,10 +337,13 @@ int docmd(int cmd, int socket){
 			}
 		}
 	}
+	TRACE
 	if (cmd==CMD_EXIT){
+		TRACE
 		return 1;
 	}
 	// if we get here, cmd processing done, ok to continue
+	TRACE
 	return 0;
 }
 
@@ -339,7 +361,7 @@ void *handle_client(void* arg){
 	int bytes;
 	int flag=0;
 	int errorcount=0;
-
+	printf("new client started to handle socket fd = %d\n", sock);
 	// set recv timeout incase caller sits idle too long
 	struct timeval tv;
 	tv.tv_usec=0;
@@ -377,7 +399,7 @@ void *handle_client(void* arg){
 		}
 		TRACE
 		buffer[BUFSIZE]='\0';
-		printf("Server Recd: '%s'\n",buffer);
+		printf("Server(%d) Recd: '%s'\n",sock,buffer);
 		//copy to cmd_buffer
 		//since there may be a residual command portion in cmdbuffer, we
 		//  copy to tail to append to existing cmdbuffer commands (if any).
@@ -390,27 +412,74 @@ void *handle_client(void* arg){
 		//printf("head_cmd = %x", (unsigned int)head_cmd);
 		int cmd = parse(&head_cmd, &tail_cmd);
 		//printf("head_cmd = %x", (unsigned int)head_cmd);
-		if (cmd!=CMD_INCOMPLETE){
+		if (cmd == CMD_CONTROL_C){
+			done = 1;
+			if (SENDERRORONCONTROL_C){
+				TRACE
+				done = docmd(cmd,sock);
+			}
+			break;
+		}else if (cmd!=CMD_INCOMPLETE){
+			TRACE
+
+			if (cmd>=0) {
+				TRACE
+				errorcount=0;
+				printf("reset(%d) errorcount=%d\n",sock,errorcount);
+			}else if (cmd==CMD_INVALID){
+				errorcount++;
+				printf("errorcount(%d)=%d\n",sock, errorcount);
+			}
+			TRACE
+			//handling 3rd consec error for multiple commands in a packet
+			// can just disconnect or send response then send disconnect
+			if ((errorcount>=MAXREMOTEERRORS)&& !SENDERRORON3RD_ERROR_SEP_PACKETS){
+				done=1;
+				break;
+			}
 			done=docmd(cmd,sock);
-			errorcount=0;
+			if (done){
+				TRACE
+				//recd an exit in a string of commands, do not process next cmd
+				break;
+			}
+			TRACE
 			while(head_cmd!=tail_cmd){
 				TRACE
 				//theres more commands in command buffer, lets do
 				// them before we ask socket for more to do
 				cmd = parse( &head_cmd, &tail_cmd);
+				if (cmd == CMD_CONTROL_C){
+					TRACE
+					done = 1;
+					if (SENDERRORONCONTROL_C){
+						done = docmd(cmd,sock);
+					}
+					break;
+				}
 				TRACE
 #ifdef DEBUG
-				printf("cmd=%d\n",cmd);
+				printf("cmd(%d)=%d\n",sock,cmd);
 #endif
 				if (cmd==CMD_INVALID){
+					TRACE
 					errorcount++;
+					printf("incr(%d) errorcount=%d\n",sock,errorcount);
+					if ((errorcount>=MAXREMOTEERRORS)&&(!SENDERRORON3RD_ERROR_SAME_PAKCETS)){
+						TRACE
+						done=1;
+						break;
+					}
 					done=docmd(cmd,sock);
+					TRACE
 				}else if (cmd>=0){
+					errorcount=0;
+					printf("reset(%d) errorcount=%d\n",sock, errorcount);
 					done=docmd(cmd,sock);
 				}else{ //cmd==CMD_INCOMPLETE
 					TRACE
 #ifdef DEBUG
-					printf("cmd=%d\n",cmd);
+					printf("cmd(%d)=%d\n",sock,cmd);
 //					printf("head_cmd = %lx\n", (long long int)head_cmd);
 //					printf("tail_cmd = %lx\n", (long long int)tail_cmd);
 #endif
@@ -453,17 +522,28 @@ void *handle_client(void* arg){
 					// head_cmd and tail_cmd are already set up correctly
 			continue;
 		}else{
+			//this branch is for complete commands within seperate packet
+			TRACE
+			errorcount++;
+			printf("incr(%d) errorcount=%d\n",sock,errorcount);
+			if ((errorcount>=MAXREMOTEERRORS)&&(!SENDERRORON3RD_ERROR_SAME_PAKCETS)){
+				// this is the 3rd consec error and we dont want to respond, just disc
+				done=1;
+				break;
+			}
 			TRACE
 			done=docmd(INVALID,sock);
-			errorcount++;
 		}
-		if (errorcount>=3){
+		TRACE
+		if (errorcount>=MAXREMOTEERRORS){
 			done=1;
 		}
 
 	}while(!done);
-	close(sock);
-	decrementclientcount();
+	TRACE
+	printf("closing socket fd=%d\n",sock);
+	//close(sock);
+	decrementclientcount(sock);
 	return 0;
 
 }
@@ -540,9 +620,7 @@ int main(int argc, char** argv)
 			continue;
 		}else{
 			TRACE
-			//fixme : note that clients can and will close in order different that open order
-			//  need to handle finding empty slot for clients as long as we are less than max
-			printf("server socket %d received connection from: %s", new_sockfd, address);
+			printf("server socket %d received connection from: %s\n", new_sockfd, address);
 			//handle_client(new_sockfd);
 			int socknum=new_sockfd;
 			pthread_t thread;
