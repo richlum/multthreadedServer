@@ -146,11 +146,15 @@ int validate(char** head, char** tail, char* command){
 		return CMD_INCOMPLETE;
 	}else if ((*head<*tail)&&(commandlength>count)){
 		TRACE
-		//partial match to command failed, reset head, then eat
+		//partial match to command failed,
+		//reset head, then eat
 		// the first char as the trigger for command invalid
 		// and allow following chars to be retested subsequent calls
-		*head=savedhead;
-		(*head)++;
+//		*head=savedhead;
+//		(*head)++;
+
+
+		//if we had ctl c in any of the buffer, quit now
 		while(savedhead<*tail){
 			if(*savedhead==(char)3){
 				//control c in recv buffer
@@ -160,6 +164,12 @@ int validate(char** head, char** tail, char* command){
 			savedhead++;
 		}
 
+		//late update on requirements,
+		// treat 'lx' as a single error count, so instead of resetting
+		// eat chars until we land at a valid start of command
+		while((*head<*tail)&&(**head!='u')&&(**head!='l')&&(**head!='e')){
+			(*head)++;
+		}
 		return CMD_INVALID;
 
 	}
@@ -210,7 +220,11 @@ int parse( char** head,  char** tail){
 			}
 #endif
 			TRACE
+			printf("old cmd char='%c'\n",**head);
 			(*head)++;
+
+			if (*head!=*tail)
+				printf("next cmd char='%c'\n",**head);
 			return CMD_INVALID;
 		}
 		//head should be pointing to next unprocessed char if more chars left
@@ -527,7 +541,7 @@ void *handle_client(void* arg){
 			TRACE
 			errorcount++;
 			printf("incr(%d) errorcount=%d\n",sock,errorcount);
-			if ((errorcount>=MAXREMOTEERRORS)&&(!SENDERRORON3RD_ERROR_SAME_PAKCETS)){
+			if ((errorcount>=MAXREMOTEERRORS)&&(!SENDERRORON3RD_ERROR_SEP_PACKETS)){
 				// this is the 3rd consec error and we dont want to respond, just disc
 				done=1;
 				break;
