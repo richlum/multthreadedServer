@@ -257,21 +257,23 @@ int load(){
 }
 
 void incrementclientcount(void){
+	int c;
 	pthread_mutex_lock(&cl_cnt_mutex);
 	clientcount++;
-#ifdef DEBUG
-	printf ("incrementclientcount to=%d\n", clientcount);
-#endif
+	c=clientcount;
 	pthread_mutex_unlock(&cl_cnt_mutex);
-
+	printf ("incrementclientcount to=%d\n", c);
 }
 void decrementclientcount(int sock){
+	int c;
 	pthread_mutex_lock(&cl_cnt_mutex);
-	if (clientcount>0)
+	if (clientcount>0){
 		clientcount--;
-	else
-		printf("error decrementing client count = %d\n", clientcount);
+		c=clientcount;
+	}
 	pthread_mutex_unlock(&cl_cnt_mutex);
+	printf("error decrementing client count = %d\n", c);
+
 }
 unsigned int getclientcount(void){
 	pthread_mutex_lock(&cl_cnt_mutex);
